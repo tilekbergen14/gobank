@@ -10,20 +10,22 @@ import (
 )
 
 type APIServer struct {
-	ListenAddr string
+	listenAddr string
+	store      Storage
 }
 
-func NewAPIServer(Addr string) *APIServer {
+func NewAPIServer(Addr string, store Storage) *APIServer {
 	return &APIServer{
-		ListenAddr: Addr,
+		listenAddr: Addr,
+		store:      store,
 	}
 }
 
 func (s *APIServer) Run() error {
 	router := mux.NewRouter()
 	router.HandleFunc("/account", customFuncToHandlerFunc(s.handleGetAccount))
-	log.Println("Server running on port ", s.ListenAddr)
-	return http.ListenAndServe(s.ListenAddr, router)
+	log.Println("Server running on port ", s.listenAddr)
+	return http.ListenAndServe(s.listenAddr, router)
 }
 
 type APIError struct {
@@ -34,7 +36,6 @@ func writeJSON(w http.ResponseWriter, code int, v any) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(code)
 	return json.NewEncoder(w).Encode(v)
-
 }
 
 type APIFunc func(w http.ResponseWriter, r *http.Request) error
