@@ -23,7 +23,9 @@ func NewAPIServer(Addr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() error {
 	router := mux.NewRouter()
-	router.HandleFunc("/account", customFuncToHandlerFunc(s.handleGetAccount))
+	router.HandleFunc("/account", customFuncToHandlerFunc(s.handleAccount))
+	// router.HandleFunc("/account/{id}", customFuncToHandlerFunc(s.handleGetAccount))
+
 	log.Println("Server running on port ", s.listenAddr)
 	return http.ListenAndServe(s.listenAddr, router)
 }
@@ -48,10 +50,35 @@ func customFuncToHandlerFunc(f APIFunc) http.HandlerFunc {
 	}
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	user := newAccount("Tilekbergen", "Mukhamet")
+func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
-		return writeJSON(w, http.StatusOK, user)
+		return s.handleGetAccounts(w, r)
 	}
+	if r.Method == "POST" {
+		return s.handleCreateAccount(w, r)
+	}
+
 	return fmt.Errorf("method not allowed! %s", r.Method)
+}
+
+func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
+	createAccReq := CreateAccReq{}
+	if err := json.NewDecoder(r.Body).Decode(&createAccReq); err != nil {
+		return err
+	}
+
+	account := newAccount(createAccReq.FirstName, createAccReq.SecondName)
+	if err := s.store.CreateAccount(account); err != nil {
+		return err
+	}
+
+	return writeJSON(w, http.StatusOK, account)
+}
+
+func (s *APIServer) handleGetAccounts(w http.ResponseWriter, r *http.Request) error {
+	res, err := s.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+	return writeJSON(w, http.StatusOK, res)
 }
